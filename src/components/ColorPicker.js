@@ -1,20 +1,42 @@
+import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import './ColorPicker.css';
 
+const STRING_SYSTEM = 16;
 export default class ColorPicker extends Component {
+    static get propTypes () {
+        return {
+            value: PropTypes.string,
+            colors: PropTypes.object,
+            onChange: PropTypes.func
+        };
+    }
+
+    static get defaultProps () {
+        return {
+            value: '#fff',
+            colors: {
+                'red': '#f00',
+                'green': '#0f0',
+                'blue': '#00f'
+            },
+            onChange: () => {}
+        };
+    }
+
     constructor (props) {
         super(props);
         this.state = {
             value: '#ffffff',
-            rgbColor: this.hexToRgb(this.props.value),
+            rgbColor: this.setHexToRgb(this.props.value),
             colors: [
                 {
                     colorName: 'white',
                     colorValue: '#ffffff'
                 }
             ],
-            showSliders: false,
-            showColors: false
+            toggleSliders: false,
+            toggleColors: false
         };
         this.handleClickOutside = this.handleClickOutside.bind(this);
     }
@@ -22,46 +44,46 @@ export default class ColorPicker extends Component {
     handleSubmit (e) {
         e.preventDefault();
         this.setState((prevState) => ({
-            value: this.rgbToHex(prevState.rgbColor)
+            value: this.setRgbToHex(prevState.rgbColor)
         }));
-        this.props.onChange(this.rgbToHex(this.state.rgbColor));
-        this.closeList(e);
+        this.props.onChange(this.setRgbToHex(this.state.rgbColor));
+        this.closeList();
     }
 
-    closeList (e) {
-        e.preventDefault();
+    closeList () {
         document.removeEventListener('mousedown', this.handleClickOutside);
         this.setState((prevState) => ({
-            rgbColor: this.hexToRgb(prevState.value),
-            showColors: false,
-            showSliders: false
+            rgbColor: this.setHexToRgb(prevState.value),
+            toggleColors: false,
+            toggleSliders: false
         }));
     }
 
-    chooseColor (e) {
-        const target = e.target;
+    setColor (e) {
+        const {target} = e;
         if (target.tagName !== 'SPAN') {
-            this.closeList(e);
+            this.closeList();
             return;
         }
-        const targetParent = target.parentElement;
-        const colorName = targetParent.dataset.name;
+        const {parentElement} = target;
+        const {colorName} = parentElement.dataset;
         this.setState(prevState => ({
-            rgbColor: this.hexToRgb(prevState.colors[colorName]),
+            rgbColor: this.setHexToRgb(prevState.colors[colorName]),
             value: prevState.colors[colorName]
         }));
         this.props.onChange(this.state.colors[colorName]);
+        this.closeList();
     }
 
-    rangeChange (e) {
-        const target = e.target;
-        const name = target.name;
-        const value = target.value;
-        const newValue = {};
-        newValue[name] = +value;
-        this.setState((prevState) => ({
-            rgbColor: Object.assign(prevState.rgbColor, newValue)
-        }));
+    changeRgbValue (e) {
+        const {target} = e;
+        const {name, value} = target;
+        this.setState((prevState) => {
+              const {rgbColor} = prevState;
+              rgbColor[name] = +value;
+              return ({rgbColor});
+          }
+        );
     }
 
     handleClickOutside (event) {
@@ -78,30 +100,126 @@ export default class ColorPicker extends Component {
     }
 
     componentWillMount () {
+        this.toggleDropdown = this.toggleDropdown.bind(this);
+        this.changeRgbValue = this.changeRgbValue.bind(this);
+        this.setColor = this.setColor.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+        this.closeList = this.closeList.bind(this);
         this.setState({
             colors: this.props.colors,
             value: this.props.value,
         });
     }
 
+    toggleDropdown (e) {
+        document.addEventListener('mousedown', this.handleClickOutside);
+        const {target} = e;
+        const dropdownName = target.dataset.dropdownName || target.parentElement.dataset.dropdownName;
+        this.setState((prevState) => {
+            const state = prevState[dropdownName] = !prevState[dropdownName];
+            return ({state});
+        });
+    }
+
+    setColorPartToHex (colorPart) {
+        const hex = colorPart.toString(STRING_SYSTEM);
+        return hex.length === 1 ? '0' + hex : hex;
+    }
+
+    setRgbToHex (colors) {
+        const firstPartOfColor = this.setColorPartToHex(colors.red);
+        const secondPartOfColor = this.setColorPartToHex(colors.green);
+        const thirdPartOfColor = this.setColorPartToHex(colors.blue);
+        return `#${firstPartOfColor}${secondPartOfColor}${thirdPartOfColor}`;
+    }
+
+    setHexToRgb (hex) {
+        const reg = /^#?([a-f\d]{1,2})([a-f\d]{1,2})([a-f\d]{1,2})$/i;
+        const result = reg.exec(hex);
+        let red = result[1];
+        let green = result[2];
+        let blue = result[3];
+        red = red.length === 1 ? parseInt(red + red, STRING_SYSTEM) : parseInt(red, STRING_SYSTEM);
+        green = green.length === 1 ? parseInt(green + green, STRING_SYSTEM) : parseInt(green, STRING_SYSTEM);
+        blue = blue.length === 1 ? parseInt(blue + blue, STRING_SYSTEM) : parseInt(blue, STRING_SYSTEM);
+        return result ? {
+            red,
+            green,
+            blue
+        } : null;
+    }
+
+    getRgbList () {
+        const {rgbColor} = this.state;
+        return this.state.toggleSliders ?
+          (
+            <form className={'rgb-list'} onChange={this.changeRgbValue}
+                  onSubmit={this.handleSubmit} ref={node => {this.rgbList = node;}}>
+                <ul className={'list'}>
+                    {Object.keys(rgbColor).map(key => {
+                        return (
+                          <li className={'rgb-list__item'} key={key}>
+                              <span>{key.substring(0, 1).toUpperCase()}</span>
+                              <input type={'range'} min={0} max={255} step={1} name={key}
+                                     defaultValue={rgbColor[key]}/>
+                          </li>
+                        );
+                    })}
+                </ul>
+                <button className={'btn btn__cancel'} type={'button'} onClick={this.closeList}>Cancel</button>
+                <button className={'btn btn__ok'}>Ok</button>
+            </form>
+          )
+          : null;
+    }
+
+    getColorsList () {
+        const {colors} = this.props;
+        return this.state.toggleColors
+          ? (
+            <div className={'colors-list'}
+                 onClick={this.setColor} ref={node => {this.colorsList = node;}}>
+                <ul className={'list'}>
+                    {Object.keys(colors).map(colorName => {
+                        return (
+                          <li className={'colors-list__item'} key={colorName} data-color-name={colorName}>
+                              <span className={'color-name'}>{colorName.toUpperCase()}</span>
+                              <span className={'item__color'} style={{
+                                  backgroundColor: colors[colorName]
+                              }}/>
+                          </li>);
+                    })}
+                </ul>
+            </div>
+          )
+          : null;
+    }
+
     render () {
-        const pickedColor = this.state.rgbColor;
-        const pickedColorStyle = {
-            backgroundColor: `rgb(${pickedColor.red},${pickedColor.green},${pickedColor.blue})`
+        const {rgbColor} = this.state;
+        const rgbColorStyle = {
+            backgroundColor: `rgb(${rgbColor.red},${rgbColor.green},${rgbColor.blue})`
         };
-        const liStyle = {display: 'inline-block', position: 'relative'};
         return (
-          <div className='container'>
-              <ul style={{listStyle: 'none', display: 'flex'}}>
-                  <li style={liStyle}><input type="text" disabled={true} defaultValue={this.defaultValue}
-                                             value={this.props.value}/></li>
-                  <li style={liStyle}>
-                      <div className='picked-color' style={pickedColorStyle}
-                           onClick={this.showColorSliders.bind(this)}></div>
+          <div className={'container'}>
+              <ul className={'color-picker__list'}>
+                  <li className={'list__item'}>
+                      <input type={'text'} disabled={true} defaultValue={this.defaultValue}
+                             value={this.props.value}/>
+                  </li>
+                  <li className={'list__item'}>
+                      <div className={'colors-container'}>
+                          <div className={'picked-color'} style={rgbColorStyle}
+                               onClick={this.toggleDropdown} data-dropdown-name={'toggleSliders'}/>
+                      </div>
                       {this.getRgbList()}
                   </li>
-                  <li style={liStyle}>
-                      <div className='colors' onClick={this.showColors.bind(this)}>▼</div>
+                  <li className={'list__item'}>
+                      <div className={'colors-container'}>
+                          <div className={'colors'} onClick={this.toggleDropdown} data-dropdown-name={'toggleColors'}>
+                              <span>▼</span>
+                          </div>
+                      </div>
                       {this.getColorsList()}
                   </li>
               </ul>
@@ -109,89 +227,4 @@ export default class ColorPicker extends Component {
         );
     }
 
-    getRgbList () {
-        const rgbColor = this.state.rgbColor;
-        return this.state.showSliders ?
-          (
-            <form className='rgb-list' onChange={this.rangeChange.bind(this)}
-                  onSubmit={this.handleSubmit.bind(this)} ref={node => {this.rgbList = node;}}>
-                <ul className='list'>
-                    {Object.keys(rgbColor).map((key, index) => {
-                        return (
-                          <li className='rgb-list__item' key={index}>
-                              <span>{key.substring(0, 1).toUpperCase()}</span>
-                              <input type="range" min={0} max={255} step={1} name={key}
-                                     defaultValue={rgbColor[key]}/>
-                          </li>
-                        );
-                    })}
-                </ul>
-                <button type='button' onClick={this.closeList.bind(this)}>Cancel</button>
-                <button>Ok</button>
-            </form>
-          )
-          : null;
-    }
-
-    getColorsList () {
-        const colors = this.props.colors;
-        return this.state.showColors ? (
-          <form className='colors-list' onSubmit={this.handleSubmit.bind(this)}
-                onClick={this.chooseColor.bind(this)} ref={node => {this.colorsList = node;}}>
-              <ul className='list'>
-                  {Object.keys(colors).map((colorName, index) => {
-                      return (
-                        <li className='colors-list__item' key={index} data-name={colorName}>
-                            <span style={{flexGrow: '1'}}>{colorName.toUpperCase()}</span>
-                            <span className='item__color' style={{
-                                backgroundColor: colors[colorName],
-                            }}>
-                            </span>
-                        </li>);
-                  })}
-              </ul>
-          </form>
-        ) : null;
-    }
-
-    showColorSliders () {
-        document.addEventListener('mousedown', this.handleClickOutside);
-        this.setState((prevState) => ({
-            showSliders: !prevState.showSliders
-        }));
-    }
-
-    showColors () {
-        document.addEventListener('mousedown', this.handleClickOutside);
-        this.setState((prevState) => ({
-            showColors: !prevState.showColors
-        }));
-    }
-
-    colorPartToHex (colorPart) {
-        const hex = colorPart.toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-    }
-
-    rgbToHex (colors) {
-        const firstPartOfColor = this.colorPartToHex(colors.red);
-        const secondPartOfColor = this.colorPartToHex(colors.green);
-        const thirdPartOfColor = this.colorPartToHex(colors.blue);
-        return `#${firstPartOfColor}${secondPartOfColor}${thirdPartOfColor}`;
-    }
-
-    hexToRgb (hex) {
-        const result = /^#?([a-f\d]{1,2})([a-f\d]{1,2})([a-f\d]{1,2})$/i.exec(hex);
-        let red = result[1];
-        let green = result[2];
-        let blue = result[3];
-        red = red.length === 1 ? parseInt(red + red, 16) : parseInt(red, 16);
-        green = green.length === 1 ? parseInt(green + green, 16) : parseInt(green, 16);
-        blue = blue.length === 1 ? parseInt(blue + blue, 16) : parseInt(blue, 16);
-        return result ? {
-            red: red,
-            green: green,
-            blue: blue
-        } : null;
-    }
 }

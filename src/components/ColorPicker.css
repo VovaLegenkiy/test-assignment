@@ -3,6 +3,16 @@
     align-items: center
 }
 
+.color-picker__list {
+    list-style: none;
+    display: flex;
+}
+
+.list__item {
+    display: inline-block;
+    position: relative;
+}
+
 .picked-color {
     display: inline-block;
     width: 10px;
@@ -17,15 +27,20 @@
 }
 
 .colors-list__item {
-    /*height: 12px;
-    width: 12px;
-    display: inline-block;*/
     position: relative;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 200px;
+    padding: 5px;
+}
+.colors-list__item:hover{
+    background-color: #bcbcb9;
+}
+
+.colors-list__item:not(:last-child) {
+    border-bottom: 1px solid black;
 }
 
 .item__color {
@@ -34,17 +49,41 @@
     display: inline-block;
 }
 
+.colors-container {
+    background-color: #bcbcb9;
+    height: 21px;
+    border-left: 1px solid black;
+}
+
 .colors {
     cursor: pointer;
+}
+
+.color-name {
+    flex-grow: 1;
 }
 
 .rgb-list {
     position: absolute;
     left: -100px;
+    border: 1px solid black;
+    padding: 0 10px;
 }
 
-.colors-list {}
+.rgb-list__item {
+    border-bottom: 1px solid black;
+    padding: 5px 0;
+}
 
+.colors-list {
+    position: absolute;
+    left: -180px;
+    top: 30px;
+    border: 1px solid black;
+}
+.btn{
+    margin: 5px;
+}
 input[type='range'] {
     cursor: pointer;
 }
