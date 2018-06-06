@@ -1,0 +1,50 @@
+.container {
+    display: flex;
+    align-items: center
+}
+
+.picked-color {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+.list {
+    padding: 0;
+    list-style: none;
+}
+
+.colors-list__item {
+    /*height: 12px;
+    width: 12px;
+    display: inline-block;*/
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 200px;
+}
+
+.item__color {
+    height: 12px;
+    width: 12px;
+    display: inline-block;
+}
+
+.colors {
+    cursor: pointer;
+}
+
+.rgb-list {
+    position: absolute;
+    left: -100px;
+}
+
+.colors-list {}
+
+input[type='range'] {
+    cursor: pointer;
+}
